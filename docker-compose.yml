@@ -1,0 +1,45 @@
+services:
+  db:
+    image: mysql:8.0
+    environment:
+      MYSQL_DATABASE: jobportal
+      MYSQL_ROOT_PASSWORD: 2006
+      # (Optional) create an app user; uncomment these two lines if you want non-root access:
+      # MYSQL_USER: appuser
+      # MYSQL_PASSWORD: apppass
+    ports: ["3307:3306"]   # change to ["3307:3306"] if 3306 is busy on Windows
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -p2006 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    environment:
+      # Use root creds (simple) OR switch to appuser/apppass if you enabled them above.
+      SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/jobportal?allowPublicKeyRetrieval=true&useSSL=false&createDatabaseIfNotExist=true
+      SPRING_DATASOURCE_USERNAME: root     # or appuser
+      SPRING_DATASOURCE_PASSWORD: 2006     # or apppass
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      # SPRING_PROFILES_ACTIVE: docker     # keep only if you actually have a 'docker' profile in application-*.yml
+      # SPRING_MAIL_HOST: smtp.gmail.com
+      # SPRING_MAIL_USERNAME: your@gmail.com
+      # SPRING_MAIL_PASSWORD: your_app_password
+    depends_on:
+      db:
+        condition: service_healthy
+    ports: ["8081:8080"]
+
+  frontend:
+    build:
+      context: ./frontend
+    depends_on: [backend]
+    ports: ["3000:3000"]
+
+volumes:
+  db_data:
