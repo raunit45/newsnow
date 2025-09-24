@@ -40,17 +40,17 @@ jobs:
       - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Build and push frontend image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: ./frontend
           file: ./frontend/Dockerfile
           push: true
           tags: |
-            ${{ secrets.DOCKER_USERNAME }}/newsnow-frontend:latest
-            ${{ secrets.DOCKER_USERNAME }}/newsnow-frontend:${{ github.sha }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/newsnow-frontend:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/newsnow-frontend:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
