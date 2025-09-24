@@ -5,6 +5,9 @@ import { GeistMono } from "geist/font/mono"
 import { Analytics } from "@vercel/analytics/next"
 import { Suspense } from "react"
 import "./globals.css"
+import { ThemeProvider } from "@/components/theme-provider"
+import ThemeToggle from "@/components/theme-toggle"
+import PageTransition from "@/components/page-transition"
 
 export const metadata: Metadata = {
   title: "NewsNow - Stay Informed with Latest News",
@@ -20,7 +23,12 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`font-sans ${GeistSans.variable} ${GeistMono.variable}`}>
-        <Suspense fallback={null}>{children}</Suspense>
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+          <div className="fixed right-3 top-3 z-50"><ThemeToggle /></div>
+          <PageTransition>
+            <Suspense fallback={null}>{children}</Suspense>
+          </PageTransition>
+        </ThemeProvider>
         <Analytics />
       </body>
     </html>

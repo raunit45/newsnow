@@ -12,7 +12,16 @@ export async function GET(request: NextRequest) {
     const url = `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(q)}&appid=${key}&units=metric`
     const r = await fetch(url)
     const data = await r.json()
-    if (!r.ok) return NextResponse.json({ error: data?.message || "Weather fetch failed" }, { status: r.status })
+    if (!r.ok) {
+      return NextResponse.json(
+        {
+          error: data?.message || "Weather fetch failed",
+          provider: "openweathermap.org",
+          hint: r.status === 401 ? "Invalid OpenWeatherMap API key. Recreate key, put in .env.local, and restart dev server." : undefined,
+        },
+        { status: r.status },
+      )
+    }
 
     return NextResponse.json({
       city: data.name,

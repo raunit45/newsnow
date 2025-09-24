@@ -5,11 +5,12 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { HeartIcon, UserIcon, LogOutIcon, MenuIcon, XIcon, ShieldCheck } from "lucide-react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import AuthModal from "@/components/auth-modal"
 import NewsCard from "@/components/news-card"
 import FavoritesSidebar from "@/components/favorites-sidebar"
 import Chatbot from "@/components/chatbot"
+import BottomDock from "@/components/bottom-dock"
 import TruthCheck from "@/components/truth-check"
 
 interface NewsArticle {
@@ -29,6 +30,7 @@ export default function HomePage() {
   const [articles, setArticles] = useState<NewsArticle[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedCategory, setSelectedCategory] = useState("general")
+  const [search, setSearch] = useState("")
   const [showAuthModal, setShowAuthModal] = useState(false)
   const [authMode, setAuthMode] = useState<"login" | "signup">("login")
   const [loggedIn, setLoggedIn] = useState(false)
@@ -37,7 +39,9 @@ export default function HomePage() {
   const [favorites, setFavorites] = useState<string[]>([])
   const [showSidebar, setShowSidebar] = useState(false)
   const [showTruth, setShowTruth] = useState(false)
+  const [showLanding, setShowLanding] = useState(true)
   const router = useRouter()
+  const searchParams = useSearchParams()
 
   const categories = ["general", "business", "technology", "entertainment", "health", "science", "sports"]
 
@@ -58,15 +62,35 @@ export default function HomePage() {
   }, [])
 
   useEffect(() => {
+    // Check URL parameters first
+    const view = searchParams?.get("view")
+    if (view === "app" || view === "news") {
+      setShowLanding(false)
+      return
+    }
+    
+    // For direct access, show news immediately instead of landing
+    // Users can still access landing by going to ?view=landing
+    const landing = searchParams?.get("landing")
+    if (landing === "true") {
+      setShowLanding(true)
+    } else {
+      setShowLanding(false) // Show news by default
+    }
+  }, [searchParams, loggedIn])
+
+  useEffect(() => {
     fetchNews()
   }, [selectedCategory])
 
   const fetchNews = async () => {
     setLoading(true)
     try {
-      const response = await fetch(`/api/news?category=${selectedCategory}`)
+      const response = await fetch(`/api/news?category=${selectedCategory}&pageSize=50`)
       const data = await response.json()
-      if (data.articles) {
+      console.log('🔥 REAL NEWS API Response:', data)
+      
+      if (data.articles && Array.isArray(data.articles)) {
         setArticles(
           data.articles.map((article: any, index: number) => ({
             ...article,
@@ -74,15 +98,31 @@ export default function HomePage() {
             category: selectedCategory,
           })),
         )
+        console.log('✅ REAL Articles loaded:', data.articles.length)
+      } else if (data.error) {
+        console.error('❌ API Error:', data.error, data.message)
+        setArticles([])
       } else {
+        console.log('❌ No articles in response')
         setArticles([])
       }
-    } catch {
+    } catch (error) {
+      console.error('💥 Error fetching REAL news:', error)
       setArticles([])
     } finally {
       setLoading(false)
     }
   }
+
+  const filteredArticles = articles.filter((a) => {
+    const q = search.trim().toLowerCase()
+    if (!q) return true
+    return (
+      a.title?.toLowerCase().includes(q) ||
+      a.description?.toLowerCase().includes(q) ||
+      a.source?.name?.toLowerCase().includes(q)
+    )
+  })
 
   const handleLogin = (nameOrEmail: string) => {
     setLoggedIn(true)
@@ -156,6 +196,84 @@ export default function HomePage() {
     }
   }
 
+  const openChat = () => {
+    window.dispatchEvent(new CustomEvent("open-chatbot"))
+    if (!loggedIn) setShowLanding(false)
+  }
+
+  if (showLanding) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-[#eef2ff] via-white to-white text-slate-800">
+        {/* Hero */}
+        <header className="border-b border-transparent">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-500 grid place-items-center text-white font-bold">N</div>
+              <span className="font-semibold text-xl">NewsNow</span>
+            </div>
+            <nav className="hidden md:flex items-center gap-6 text-slate-600">
+              <span className="px-3 py-1 rounded-full bg-slate-100">Home</span>
+              <button onClick={() => setShowLanding(false)} className="hover:text-slate-900">News</button>
+              <button onClick={() => openChat()} className="hover:text-slate-900">Chatbot</button>
+              <button onClick={() => { setAuthMode("login"); setShowAuthModal(true); }} className="hover:text-slate-900">Sign In</button>
+            </nav>
+          </div>
+        </header>
+
+        <main>
+          <section className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-24 text-center">
+            <h1 className="text-5xl sm:text-6xl font-extrabold tracking-tight bg-gradient-to-br from-indigo-600 to-violet-600 text-transparent bg-clip-text">NewsNow</h1>
+            <p className="mt-6 text-lg sm:text-xl text-slate-600">Your gateway to the world - Real-time news, weather updates, and intelligent conversations in one beautiful platform</p>
+            <div className="mt-8 flex items-center justify-center gap-4">
+              <button onClick={() => setShowLanding(false)} className="px-6 py-3 rounded-full bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-md hover:opacity-95">Explore News</button>
+              <button onClick={() => openChat()} className="px-6 py-3 rounded-full bg-white text-slate-700 shadow border border-slate-200 hover:bg-slate-50">Try Chatbot</button>
+            </div>
+          </section>
+
+          {/* Features */}
+          <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 grid sm:grid-cols-2 lg:grid-cols-3 gap-6 pb-12">
+            {[
+              { title: "Latest News", desc: "Stay updated with breaking news, trending stories, and global events from trusted sources around the world." },
+              { title: "Weather Forecast", desc: "Get accurate weather forecasts, current conditions, and weather alerts for any location worldwide." },
+              { title: "AI Chatbot", desc: "Chat with our intelligent assistant for quick answers, recommendations, and helpful information." },
+            ].map((f, i) => (
+              <div key={i} className="rounded-2xl bg-white border border-slate-200 p-6 shadow-sm">
+                <h3 className="text-xl font-semibold text-slate-900">{f.title}</h3>
+                <p className="mt-2 text-slate-600 text-sm leading-relaxed">{f.desc}</p>
+              </div>
+            ))}
+          </section>
+
+          {/* Stats */}
+          <section className="bg-gradient-to-r from-indigo-600 to-violet-600">
+            <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10 grid grid-cols-1 sm:grid-cols-3 gap-8 text-white">
+              <div className="text-center">
+                <div className="text-4xl font-bold">24/7</div>
+                <div className="opacity-90">Real-time Updates</div>
+              </div>
+              <div className="text-center">
+                <div className="text-4xl font-bold">100+</div>
+                <div className="opacity-90">News Sources</div>
+              </div>
+              <div className="text-center">
+                <div className="text-4xl font-bold">∞</div>
+                <div className="opacity-90">Possibilities</div>
+              </div>
+            </div>
+          </section>
+        </main>
+
+        <AuthModal
+          isOpen={showAuthModal}
+          onClose={() => setShowAuthModal(false)}
+          mode={authMode}
+          onLogin={handleLogin}
+          onSwitchMode={(mode) => setAuthMode(mode)}
+        />
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-slate-900">
       {/* Header */}
@@ -181,17 +299,24 @@ export default function HomePage() {
 
             {/* Navigation */}
             <nav className="hidden md:flex items-center space-x-8">
-              {["PODCAST", "POLITICS", "TECH", "INVESTIGATIONS", "MARKETS", "GOLD", "CRYPTO", "SPORTS", "MORE"].map(
-                (label) => (
-                  <button
-                    key={label}
-                    onClick={() => handleCategorySelect(navToCategory(label))}
-                    className="text-gray-300 hover:text-white transition-colors"
-                  >
-                    {label}
-                  </button>
-                ),
-              )}
+              <button
+                onClick={() => {setShowLanding(false); setSelectedCategory('general');}}
+                className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 transition-colors"
+              >
+                NEWS
+              </button>
+              <button
+                onClick={() => router.push('/weather')}
+                className="text-gray-300 hover:text-white transition-colors"
+              >
+                WEATHER
+              </button>
+              <button
+                onClick={() => router.push('/chat')}
+                className="text-gray-300 hover:text-white transition-colors"
+              >
+                CHAT
+              </button>
             </nav>
 
             {/* Auth Buttons */}
@@ -244,7 +369,7 @@ export default function HomePage() {
       {/* Category Navigation */}
       <div className="bg-slate-800 border-b border-slate-700">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center space-x-6 py-3 overflow-x-auto">
+          <div className="flex items-center gap-4 py-3 overflow-x-auto">
             {categories.map((category) => (
               <button
                 key={category}
@@ -259,6 +384,14 @@ export default function HomePage() {
                 {favorites.includes(category) && <HeartIcon className="w-3 h-3 fill-current" />}
               </button>
             ))}
+            <div className="ml-auto flex-1 min-w-[220px] max-w-sm">
+              <input
+                value={search}
+                onChange={(e)=>setSearch(e.target.value)}
+                placeholder="Search articles…"
+                className="w-full rounded-md bg-slate-700 border border-slate-600 px-3 py-2 text-sm text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-red-600"
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -352,7 +485,7 @@ export default function HomePage() {
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                {articles.map((article) => (
+                {filteredArticles.map((article) => (
                   <NewsCard
                     key={article.id}
                     article={article}
@@ -375,6 +508,9 @@ export default function HomePage() {
 
       {/* Chatbot Floating Widget (only when logged in) */}
       {loggedIn && <Chatbot fullname={displayName} />}
+
+      {/* Bottom Dock with News/Weather/Chat after sign-in */}
+      {loggedIn && <BottomDock visible={true} />}
 
       {/* Truth Check modal */}
       <TruthCheck open={showTruth} onOpenChange={setShowTruth} />

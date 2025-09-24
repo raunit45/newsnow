@@ -21,6 +21,12 @@ export default function Chatbot({ fullname }: { fullname: string }) {
   }, [open])
 
   useEffect(() => {
+    const handler = () => setOpen(true)
+    window.addEventListener("open-chatbot", handler as EventListener)
+    return () => window.removeEventListener("open-chatbot", handler as EventListener)
+  }, [])
+
+  useEffect(() => {
     listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: "smooth" })
   }, [messages])
 
